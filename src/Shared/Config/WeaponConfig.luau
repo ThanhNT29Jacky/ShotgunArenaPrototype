@@ -6,6 +6,7 @@ local WeaponConfig: {
 	FIRE_RATE: number,
 	MAX_RANGE: number,
 	RELOAD_TIME: number,
+	MOUSE_SENSITIVITY: number,
 } = {
 	DAMAGE_PER_PELLET = 12,
 	PELLET_COUNT = 10,
@@ -14,6 +15,7 @@ local WeaponConfig: {
 	FIRE_RATE = 0.8,
 	MAX_RANGE = 200,
 	RELOAD_TIME = 1.5,
+	MOUSE_SENSITIVITY = 0.003,
 }
 
 return WeaponConfig

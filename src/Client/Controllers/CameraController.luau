@@ -2,6 +2,7 @@ local Knit = require(game:GetService("ReplicatedStorage"):WaitForChild("Packages
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local WeaponConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("Config"):WaitForChild("WeaponConfig"))
 
 local CameraController = Knit.CreateController {
 	Name = "CameraController",
@@ -11,6 +12,8 @@ local camera: Camera = workspace.CurrentCamera
 local localPlayer: Player = Players.LocalPlayer
 local character: Model?
 local hrp: Part?
+local head: BasePart?
+local humanoid: Humanoid?
 
 local cameraYaw: number = 0
 local cameraPitch: number = 0
@@ -20,6 +23,10 @@ local recoilOffset: CFrame = CFrame.new()
 local viewmodelModel: Model?
 local leftArm: Part?
 local rightArm: Part?
+local weaponPart: Part?
+
+local ARM_ROTATION: CFrame = CFrame.Angles(0, 0, math.rad(90))
+local CAMERA_RENDER_STEP: string = "CameraUpdate"
 
 function CameraController:KnitInit()
 	camera.CameraType = Enum.CameraType.Scriptable
@@ -31,18 +38,28 @@ function CameraController:KnitStart()
 	localPlayer.CharacterAdded:Connect(function(newCharacter: Model)
 		character = newCharacter
 		hrp = character:WaitForChild("HumanoidRootPart") :: Part
+		head = character:WaitForChild("Head") :: BasePart
+		humanoid = character:WaitForChild("Humanoid") :: Humanoid
+		humanoid.AutoRotate = false
 		self:_setupViewmodel()
 	end)
 
 	if localPlayer.Character then
 		character = localPlayer.Character
 		hrp = character:WaitForChild("HumanoidRootPart") :: Part
+		head = character:WaitForChild("Head") :: BasePart
+		humanoid = character:WaitForChild("Humanoid") :: Humanoid
+		humanoid.AutoRotate = false
 		self:_setupViewmodel()
 	end
 
-	RunService.RenderStepped:Connect(function(deltaTime: number)
-		self:_updateCamera(deltaTime)
-	end)
+	RunService:BindToRenderStep(
+		CAMERA_RENDER_STEP,
+		Enum.RenderPriority.Camera.Value + 1,
+		function(deltaTime: number)
+			self:_updateCamera(deltaTime)
+		end
+	)
 end
 
 function CameraController:_setupViewmodel(): ()
@@ -64,7 +81,7 @@ function CameraController:_setupViewmodel(): ()
 	leftArm.Color = Color3.fromRGB(204, 153, 102)
 	leftArm.Material = Enum.Material.SmoothPlastic
 	leftArm.CanCollide = false
-	leftArm.CFrame = camera.CFrame * CFrame.new(-0.6, -0.8, -1)
+	leftArm.CFrame = camera.CFrame * CFrame.new(-0.6, -0.8, -1) * ARM_ROTATION
 	leftArm.Parent = viewmodelModel
 
 	-- Create right arm part
@@ -75,8 +92,18 @@ function CameraController:_setupViewmodel(): ()
 	rightArm.Color = Color3.fromRGB(204, 153, 102)
 	rightArm.Material = Enum.Material.SmoothPlastic
 	rightArm.CanCollide = false
-	rightArm.CFrame = camera.CFrame * CFrame.new(0.6, -0.8, -1)
+	rightArm.CFrame = camera.CFrame * CFrame.new(0.6, -0.8, -1) * ARM_ROTATION
 	rightArm.Parent = viewmodelModel
+
+	-- Create weapon placeholder block
+	weaponPart = Instance.new("Part")
+	weaponPart.Name = "WeaponBlock"
+	weaponPart.Size = Vector3.new(0.2, 0.2, 1.2)
+	weaponPart.Color = Color3.fromRGB(60, 60, 60)
+	weaponPart.Material = Enum.Material.Metal
+	weaponPart.CanCollide = false
+	weaponPart.CFrame = camera.CFrame * CFrame.new(0.3, -0.85, -1.2)
+	weaponPart.Parent = viewmodelModel
 end
 
 function CameraController:_updateCamera(deltaTime: number): ()
@@ -86,14 +113,15 @@ function CameraController:_updateCamera(deltaTime: number): ()
 	local mouseDelta: Vector2 = UserInputService:GetMouseDelta()
 
 	-- Update yaw and pitch
-	cameraYaw = cameraYaw + mouseDelta.X * 0.003
-	cameraPitch = cameraPitch - mouseDelta.Y * 0.003
+	cameraYaw = cameraYaw + mouseDelta.X * WeaponConfig.MOUSE_SENSITIVITY
+	cameraPitch = cameraPitch - mouseDelta.Y * WeaponConfig.MOUSE_SENSITIVITY
 
 	-- Clamp pitch to ±80 degrees
 	cameraPitch = math.clamp(cameraPitch, math.rad(-80), math.rad(80))
 
-	-- Calculate base camera CFrame (from HRP top)
-	local basePosition: Vector3 = hrp.Position + Vector3.new(0, 1.5, 0)
+	-- Calculate base camera CFrame (from Head position)
+	local headPart = head or hrp  -- fallback if Head not yet loaded
+	local basePosition: Vector3 = headPart.Position
 	local baseCFrame: CFrame = CFrame.new(basePosition) * CFrame.Angles(0, cameraYaw, 0) * CFrame.Angles(cameraPitch, 0, 0)
 
 	-- Apply recoil offset
@@ -104,14 +132,20 @@ function CameraController:_updateCamera(deltaTime: number): ()
 
 	-- Update viewmodel if exists
 	if viewmodelModel then
-		viewmodelModel.Parent = camera -- Ensure it stays in camera
-
 		if leftArm then
-			leftArm.CFrame = camera.CFrame * CFrame.new(-0.6, -0.8, -1)
+			leftArm.CFrame = camera.CFrame * CFrame.new(-0.6, -0.8, -1) * ARM_ROTATION
 		end
 		if rightArm then
-			rightArm.CFrame = camera.CFrame * CFrame.new(0.6, -0.8, -1)
+			rightArm.CFrame = camera.CFrame * CFrame.new(0.6, -0.8, -1) * ARM_ROTATION
 		end
+		if weaponPart then
+			weaponPart.CFrame = camera.CFrame * CFrame.new(0.3, -0.85, -1.2)
+		end
+	end
+
+	-- Rotate character body to match camera yaw (FPS convention)
+	if hrp then
+		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, cameraYaw, 0)
 	end
 
 	-- Update recoil spring

@@ -1,0 +1,13 @@
+.DS_Store
+/Packages
+/sourcemap.json
+/*.lock
+/*.rbxl
+/*.rbxlx
+/*.rbxm
+/*.rbxmx
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

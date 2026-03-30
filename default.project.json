@@ -1,0 +1,20 @@
+{
+  "name": "ShotgunArenaPrototype",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$path": "src/Shared",
+      "Packages": {
+        "$path": "$packages"
+      }
+    },
+    "ServerScriptService": {
+      "$path": "src/Server"
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$path": "src/Client"
+      }
+    }
+  }
+}

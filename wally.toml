@@ -1,0 +1,8 @@
+[package]
+name = "jacky/shotgun-arena"
+version = "0.1.0"
+realm = "shared"
+registry = "https://github.com/UpliftGames/wally-index"
+
+[dependencies]
+Knit = "sleitnick/knit@^1.7"

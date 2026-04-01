@@ -214,10 +214,22 @@ function BlasterController:reload()
 	self.viewModelController:playReloadAnimation(reloadTime)
 	self.characterAnimationController:playReloadAnimation(reloadTime)
 
+	-- Optimistically set reloading state for responsive UI feedback
 	self.reloading = true
 	self.guiController:setReloading(self.reloading)
-	reloadRemote:FireServer(self.blaster)
 
+	-- InvokeServer waits for the server to confirm whether the reload was accepted.
+	-- The server validates the request, sets RELOADING_ATTRIBUTE, and returns true/false.
+	local success = reloadRemote:InvokeServer(self.blaster)
+	if not success then
+		-- Server rejected the reload — roll back optimistic state
+		warn("[BlasterController] Reload failed on server")
+		self.reloading = false
+		self.guiController:setReloading(self.reloading)
+		return
+	end
+
+	-- Server accepted: schedule client-side ammo/state update after reload completes
 	self.reloadTask = task.delay(reloadTime, function()
 		self.ammo = magazineSize
 		self.reloading = false
@@ -306,7 +318,20 @@ function BlasterController:equip()
 
 	-- Keep track of the humanoid in the character currently equipping the blaster.
 	-- We need this to make sure the player can't shoot while dead.
-	self.humanoid = self.blaster.Parent:FindFirstChildOfClass("Humanoid")
+	-- FindFirstChildOfClass is instant (no yield). If it returns nil the character is
+	-- still being assembled (e.g. streaming in), so fall back to WaitForChild with a
+	-- 5-second timeout. If neither finds it in time, warn and bail out gracefully
+	-- rather than letting the coroutine hang indefinitely.
+	local character = self.blaster.Parent
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+		or character:WaitForChild("Humanoid", 5)
+	if not humanoid then
+		warn("[BlasterController] Humanoid not found in character '"
+			.. tostring(character.Name) .. "' — equip aborted.")
+		self.equipped = false
+		return
+	end
+	self.humanoid = humanoid
 end
 
 function BlasterController:unequip()

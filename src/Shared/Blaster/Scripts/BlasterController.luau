@@ -142,6 +142,11 @@ function BlasterController:shoot()
 		self.guiController:showHitmarker()
 	end
 
+	-- FireServer args:
+	--   timestamp: number              — Workspace:GetServerTimeNow(); also seeds server-side ray spread recalculation
+	--   blaster:   Tool               — equipped weapon; server reads gun attributes (spread, range, damage, etc.)
+	--   origin:    CFrame             — camera CFrame at fire time; server recasts rays from this origin
+	--   tagged:    {[string]: Humanoid} — string-keyed hit map (non-contiguous arrays don't replicate reliably)
 	shootRemote:FireServer(now, self.blaster, origin, tagged)
 
 	local muzzlePosition = self.viewModelController:getMuzzlePosition()

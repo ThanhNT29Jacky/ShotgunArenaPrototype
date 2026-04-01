@@ -20,6 +20,17 @@ local events = ServerScriptService.Blaster.Events
 local taggedEvent = events.Tagged
 local eliminatedEvent = events.Eliminated
 
+-- OnServerEvent contract:
+--   player:    Player               — automatically injected by Roblox; never trust client-supplied identity
+--   timestamp: number               — Workspace:GetServerTimeNow() from client; validated against last-shot time (anti-spam);
+--                                     also used as the random seed to reproduce the same spread on the server
+--   blaster:   Tool                 — client's equipped weapon; validated via validateShootArguments to be the player's
+--                                     active tool; attributes (spread, range, damage, etc.) read server-side only
+--   origin:    CFrame               — client camera CFrame at fire time; server recasts all rays from this origin
+--                                     using the same seed so no client-supplied directions are trusted
+--   tagged:    {[string]: Humanoid} — client-reported hits (string keys – non-contiguous arrays don't replicate reliably);
+--                                     each entry is re-validated against server raycasts before any damage is applied
+-- Post-conditions: only server-confirmed hits receive damage; taggedEvent and eliminatedEvent fire with authoritative results
 local function onShootEvent(
 	player: Player,
 	timestamp: number,

@@ -304,9 +304,6 @@ function BlasterController:equip()
 	-- Enable Aim Assist
 	self.aimAssistController:enable()
 
-	-- Enable view model
-	self.viewModelController:enable()
-
 	-- Enable GUI
 	self.guiController:setAmmo(self.ammo)
 	self.guiController:setReloading(self.reloading)
@@ -315,18 +312,15 @@ function BlasterController:equip()
 	-- Enable touch input controller
 	self.touchInputController:enable()
 
-	-- Enable character animations
-	self.characterAnimationController:enable()
-
 	-- Keep track of the humanoid in the character currently equipping the blaster.
 	-- We need this to make sure the player can't shoot while dead.
 	-- FindFirstChildOfClass is instant (no yield). If it returns nil the character is
 	-- still being assembled (e.g. streaming in), so fall back to WaitForChild with a
-	-- 5-second timeout. If neither finds it in time, warn and bail out gracefully
+	-- 10-second timeout. If neither finds it in time, warn and bail out gracefully
 	-- rather than letting the coroutine hang indefinitely.
 	local character = self.blaster.Parent
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-		or character:WaitForChild("Humanoid", 5)
+		or character:WaitForChild("Humanoid", 10)
 	if not humanoid then
 		warn("[BlasterController] Humanoid not found in character '"
 			.. tostring(character.Name) .. "' — equip aborted.")
@@ -334,6 +328,12 @@ function BlasterController:equip()
 		return
 	end
 	self.humanoid = humanoid
+
+	-- Enable view model (humanoid must be confirmed before enabling animations)
+	self.viewModelController:enable()
+
+	-- Enable character animations (requires humanoid to be set)
+	self.characterAnimationController:enable()
 end
 
 function BlasterController:unequip()

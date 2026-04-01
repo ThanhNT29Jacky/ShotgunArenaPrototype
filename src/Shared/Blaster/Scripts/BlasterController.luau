@@ -51,6 +51,7 @@ function BlasterController.new(blaster: Tool)
 		shootHaptic = hapticsFolder and hapticsFolder:FindFirstChild("ShootHaptic") or nil,
 		wantsScope = false,
 		isScoped = false,
+		humanoidDestroyedConnection = nil :: RBXScriptConnection?,
 	}
 	setmetatable(self, BlasterController)
 
@@ -330,6 +331,14 @@ function BlasterController:equip()
 	end
 	self.humanoid = humanoid
 
+	-- Monitor humanoid destruction (e.g. character respawn mid-game) so we can
+	-- cleanly unequip instead of leaving controllers with a dead humanoid reference.
+	self.humanoidDestroyedConnection = humanoid.AncestryChanged:Connect(function()
+		if not humanoid.Parent then
+			self:unequip()
+		end
+	end)
+
 	-- Enable view model (humanoid must be confirmed before enabling animations)
 	self.viewModelController:enable()
 
@@ -342,6 +351,14 @@ function BlasterController:unequip()
 		return
 	end
 	self.equipped = false
+
+	-- Disconnect humanoid destruction monitor (must happen before deactivate so
+	-- a re-entrant call from AncestryChanged doesn't double-unequip).
+	if self.humanoidDestroyedConnection then
+		self.humanoidDestroyedConnection:Disconnect()
+		self.humanoidDestroyedConnection = nil
+	end
+	self.humanoid = nil
 
 	-- Force deactivate the blaster when unequipping it
 	self:deactivate()

@@ -153,8 +153,13 @@ local function onReloadInvoke(player: Player, blaster: Tool): boolean
 
 	local reloadTask
 	local ancestryChangedConnection
+	local reloadActive = true
 
 	reloadTask = task.delay(reloadTime, function()
+		if not reloadActive then
+			return
+		end
+		reloadActive = false
 		blaster:SetAttribute(Constants.AMMO_ATTRIBUTE, magazineSize)
 		blaster:SetAttribute(Constants.RELOADING_ATTRIBUTE, false)
 		ancestryChangedConnection:Disconnect()
@@ -162,6 +167,10 @@ local function onReloadInvoke(player: Player, blaster: Tool): boolean
 
 	ancestryChangedConnection = blaster.AncestryChanged:Connect(function()
 		if blaster.Parent ~= character then
+			if not reloadActive then
+				return
+			end
+			reloadActive = false
 			blaster:SetAttribute(Constants.RELOADING_ATTRIBUTE, false)
 
 			task.cancel(reloadTask)

@@ -77,8 +77,8 @@ function BlasterController:canReload(): boolean
 end
 
 function BlasterController:recoil()
-	local recoilMax      = self.blaster:GetAttribute(Constants.RECOIL_MAX_ATTRIBUTE)
-	local accelerateTime = self.blaster:GetAttribute(Constants.RECOIL_ACCELERATE_ATTRIBUTE)
+	local recoilMax: Vector2      = self.blaster:GetAttribute(Constants.RECOIL_MAX_ATTRIBUTE) or Vector2.new(5, 4)
+	local accelerateTime: number = self.blaster:GetAttribute(Constants.RECOIL_ACCELERATE_ATTRIBUTE) or 0.4
 
 	local maxXRad = math.rad(recoilMax.X)
 	local maxYRad = math.rad(recoilMax.Y)

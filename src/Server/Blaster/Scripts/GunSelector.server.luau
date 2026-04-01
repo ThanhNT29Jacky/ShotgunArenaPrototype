@@ -60,9 +60,8 @@ end
 local function onCharacterAdded(player: Player)
 	task.wait() -- let Backpack populate
 	local saved = selectedGuns[player.UserId]
-	if saved then
-		applyConfig(player, saved)
-	end
+	-- Apply the saved gun config, or default to Pistol on first spawn
+	applyConfig(player, saved or "Pistol")
 end
 
 local function onPlayerAdded(player: Player)

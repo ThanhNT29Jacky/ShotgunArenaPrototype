@@ -47,7 +47,7 @@ function BlasterController.new(blaster: Tool)
 		ammo = blaster:GetAttribute(Constants.AMMO_ATTRIBUTE),
 		reloading = blaster:GetAttribute(Constants.RELOADING_ATTRIBUTE),
 		connections = {},
-		shootHaptic = blaster:FindFirstChild("Haptics"):FindFirstChild("ShootHaptic"),
+		shootHaptic = blaster:FindFirstChild("Haptics") and blaster:FindFirstChild("Haptics"):FindFirstChild("ShootHaptic") or nil,
 		wantsScope = false,
 		isScoped = false,
 	}
@@ -146,7 +146,9 @@ function BlasterController:shoot()
 	drawRayResults(muzzlePosition, rayResults)
 
 	-- fire haptic
-	self.shootHaptic:Play()
+	if self.shootHaptic then
+		self.shootHaptic:Play()
+	end
 
 	-- Brief unscope on shoot, then auto-rescope after delay
 	if self.isScoped then

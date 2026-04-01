@@ -13,6 +13,7 @@ end
 
 local selectedGuns = {}
 local connections: { [Player]: { RBXScriptConnection } } = {}
+local lastSelectTime: { [Player]: number } = {}
 
 local function applyConfig(player: Player, gunName: string)
 	local config = GunConfigs[gunName]
@@ -45,6 +46,13 @@ local function onSelectGun(player: Player, gunName: unknown)
 		return
 	end
 
+	-- Rate limiting: enforce 100ms minimum between gun selections per player
+	if lastSelectTime[player] and tick() - lastSelectTime[player] < 0.1 then
+		warn("[GunSelector] Selection throttled for", player.Name)
+		return
+	end
+	lastSelectTime[player] = tick()
+
 	selectedGuns[player.UserId] = gunName
 	applyConfig(player, gunName)
 end
@@ -70,6 +78,7 @@ safePlayerAdded(onPlayerAdded)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	selectedGuns[player.UserId] = nil
+	lastSelectTime[player] = nil
 	if connections[player] then
 		for _, conn in connections[player] do
 			conn:Disconnect()

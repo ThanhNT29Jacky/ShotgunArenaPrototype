@@ -3,10 +3,7 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "$path": "src/Shared",
-      "Packages": {
-        "$path": "$packages"
-      }
+      "$path": "src/Shared"
     },
     "ServerScriptService": {
       "$path": "src/Server"
@@ -14,6 +11,17 @@
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "$path": "src/Client"
+      },
+      "$properties": {
+        "AvatarJointUpgrade_SerializedRollout": "Enabled",
+        "CameraMaxZoomDistance": 128.0,
+        "CameraMode": "LockFirstPerson",
+        "CharacterBreakJointsOnDeath": false,
+        "CharacterJumpHeight": 7.20009183883667,
+        "CharacterJumpPower": 50.14500427246094,
+        "CharacterUseJumpPower": false,
+        "CharacterWalkSpeed": 20.0,
+        "LoadCharacterAppearance": false
       }
     }
   }

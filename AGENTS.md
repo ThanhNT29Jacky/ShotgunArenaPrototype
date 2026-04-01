@@ -512,6 +512,44 @@ git checkout main
 git commit -m "fix something"
 ```
 
+### Worktree workflow (MANDATORY for multi-task features)
+
+**Use git worktrees** to give each task an isolated workspace. This prevents branch-switching conflicts and lets subagents work in parallel without touching each other's files.
+
+Worktrees live in `.worktrees/` (gitignored). Each worktree is its own working directory on a dedicated branch.
+
+```bash
+# Step 1 — create a worktree for the task
+git worktree add .worktrees/fix-reload-remote -b fix/reload-remote-type
+
+# Step 2 — work inside the worktree (separate directory)
+cd .worktrees/fix-reload-remote
+# ... edit files, commit ...
+
+# Step 3 — push when done
+git push -u origin fix/reload-remote-type
+
+# Step 4 — clean up after merge
+git worktree remove .worktrees/fix-reload-remote
+git branch -d fix/reload-remote-type
+```
+
+**Rules for agents and subagents:**
+- Check for `.worktrees/` first — if it exists and is gitignored, use it
+- Create one worktree **per task or beads issue** — never share a worktree between tasks
+- Always pass the worktree path to subagents so they work in the correct directory
+- Remove the worktree after the branch is merged
+
+```bash
+# ✅ correct — isolated worktree per task
+git worktree add .worktrees/feat-aim-assist -b feature/aim-assist
+# subagent works in .worktrees/feat-aim-assist/
+
+# ❌ wrong — editing main working tree on a feature branch
+git checkout feature/aim-assist
+# (pollutes the main working tree, blocks other tasks)
+```
+
 ### Commit messages — imperative mood
 
 ```bash

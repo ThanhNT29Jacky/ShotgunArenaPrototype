@@ -34,6 +34,7 @@ function BlasterController.new(blaster: Tool)
 	local touchInputController = TouchInputController.new(blaster)
 	local characterAnimationController = CharacterAnimationController.new(blaster)
 
+	local hapticsFolder = blaster:FindFirstChild("Haptics")
 	local self = {
 		blaster = blaster,
 		aimAssistController = aimAssistController,
@@ -47,7 +48,7 @@ function BlasterController.new(blaster: Tool)
 		ammo = blaster:GetAttribute(Constants.AMMO_ATTRIBUTE),
 		reloading = blaster:GetAttribute(Constants.RELOADING_ATTRIBUTE),
 		connections = {},
-		shootHaptic = blaster:FindFirstChild("Haptics") and blaster:FindFirstChild("Haptics"):FindFirstChild("ShootHaptic") or nil,
+		shootHaptic = hapticsFolder and hapticsFolder:FindFirstChild("ShootHaptic") or nil,
 		wantsScope = false,
 		isScoped = false,
 	}

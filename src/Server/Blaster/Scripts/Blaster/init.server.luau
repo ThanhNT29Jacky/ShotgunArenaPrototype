@@ -182,8 +182,19 @@ local function onReloadInvoke(player: Player, blaster: Tool): boolean
 end
 
 local function initialize()
-	shootRemote.OnServerEvent:Connect(onShootEvent)
-	reloadRemote.OnServerInvoke = onReloadInvoke
+	shootRemote.OnServerEvent:Connect(function(player: Player, ...)
+		local ok, err = xpcall(onShootEvent, function(e: string): string
+			warn("[Blaster] onShootEvent error for", player.Name, ":", e, debug.traceback())
+			return e
+		end, player, ...)
+	end)
+	reloadRemote.OnServerInvoke = function(player: Player, ...)
+		local ok, result = xpcall(onReloadInvoke, function(e: string): string
+			warn("[Blaster] onReloadInvoke error for", player.Name, ":", e, debug.traceback())
+			return e
+		end, player, ...)
+		return ok and result or false
+	end
 end
 
 initialize()

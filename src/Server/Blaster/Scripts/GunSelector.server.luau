@@ -71,7 +71,12 @@ local function onPlayerAdded(player: Player)
 	connections[player] = { charConn }
 end
 
-selectGunRemote.OnServerEvent:Connect(onSelectGun)
+selectGunRemote.OnServerEvent:Connect(function(player: Player, ...)
+	local ok, err = xpcall(onSelectGun, function(e: string): string
+		warn("[GunSelector] onSelectGun error for", player.Name, ":", e, debug.traceback())
+		return e
+	end, player, ...)
+end)
 
 safePlayerAdded(onPlayerAdded)
 

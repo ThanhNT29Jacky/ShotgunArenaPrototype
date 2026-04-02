@@ -19,18 +19,15 @@ function Mode.start(finish: () -> ())
 	table.insert(
 		connections,
 		eliminatedEvent.Event:Connect(function(player: Player)
+			local team = player.Team
 			Scoring.incrementScore(player, 1)
 
 			-- Finish early when a team reaches the scoring limit
-			if player.Team then
-				-- Since we are using deferred events, the team score will not get updated until the end of this frame.
-				-- We'll defer the check so that we get an accurate number.
-				task.defer(function()
-					local teamScore = Scoring.getTeamScore(player.Team)
-					if teamScore >= TEAM_SCORE_LIMIT then
-						finish()
-					end
-				end)
+			if team then
+				local teamScore = Scoring.getTeamScore(team)
+				if teamScore >= TEAM_SCORE_LIMIT then
+					finish()
+				end
 			end
 		end)
 	)

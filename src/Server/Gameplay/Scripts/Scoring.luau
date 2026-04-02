@@ -73,6 +73,9 @@ function Scoring.incrementScore(player: Player, amount: number)
 	local score = leaderstats:FindFirstChild("Score")
 	if not score then return end
 	score.Value += amount
+	if player.Team then
+		updateTeamScore(player.Team)
+	end
 end
 
 function Scoring.getPlayerScore(player: Player): number

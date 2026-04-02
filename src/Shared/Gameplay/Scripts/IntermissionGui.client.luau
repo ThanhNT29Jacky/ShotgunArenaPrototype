@@ -3,7 +3,7 @@
 	Displays the full-screen COMBAT REPORT intermission screen after each round.
 
 	Listens for:
-	  IntermissionStart(winningTeam: Team, stats: {{name, teamName, teamColor, kills}})
+	  IntermissionStart(winningTeam: Team, stats: {{name, teamName, teamColor, kills}}, intermissionEndTime: number)
 
 	Layout:
 	  • Dark navy background with UIGradient sweep
@@ -21,11 +21,13 @@ local Players        = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService     = game:GetService("RunService")
 local TweenService   = game:GetService("TweenService")
+local Workspace      = game:GetService("Workspace")
 
 local Constants = require(ReplicatedStorage.Gameplay.Constants)
 
 local player    = Players.LocalPlayer
 local playerGui = player.PlayerGui
+local currentCountdownConnection: RBXScriptConnection? = nil
 
 local remotes              = ReplicatedStorage.Gameplay.Remotes
 local intermissionStartRemote = remotes:WaitForChild("IntermissionStart", 10)
@@ -141,8 +143,9 @@ end
 -- ── Build the full GUI ────────────────────────────────────────────────────────
 local function buildGui(
 	winningTeam: Team,
-	stats: { { name: string, teamName: string, teamColor: Color3, kills: number } }
-): ScreenGui
+	stats: { { name: string, teamName: string, teamColor: Color3, kills: number } },
+	intermissionEndTime: number
+): (ScreenGui, Frame, TextLabel)
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name           = "IntermissionGui"
 	screenGui.DisplayOrder   = 20
@@ -288,7 +291,7 @@ local function buildGui(
 
 	local countdownLabel = makeLabel(
 		centreCol,
-		tostring(Constants.INTERMISSION_TIME),
+		tostring(math.ceil(math.max(intermissionEndTime - Workspace:GetServerTimeNow(), 0))),
 		UDim2.new(1, 0, 1, 0),
 		UDim2.new(0, 0, 0, 0),
 		32,
@@ -319,7 +322,8 @@ end
 -- ── Main event handler ────────────────────────────────────────────────────────
 intermissionStartRemote.OnClientEvent:Connect(function(
 	winningTeam: Team,
-	stats: { { name: string, teamName: string, teamColor: Color3, kills: number } }
+	stats: { { name: string, teamName: string, teamColor: Color3, kills: number } },
+	intermissionEndTime: number
 )
 	local ok, err = pcall(function()
 		-- Input validation
@@ -331,28 +335,33 @@ intermissionStartRemote.OnClientEvent:Connect(function(
 			warn("[IntermissionGui] stats is not a table (got", type(stats), ") — using empty table")
 			stats = {}
 		end
+		if type(intermissionEndTime) ~= "number" then
+			warn("[IntermissionGui] intermissionEndTime is not a number (got", type(intermissionEndTime), ") — skipping GUI")
+			return
+		end
 		warn("[IntermissionGui] Building GUI — winner:", winningTeam.Name, "| stats:", #stats)
 
 		-- Build fresh GUI each round
-		local screenGui, bg, countdownLabel = buildGui(winningTeam, stats)
+		local screenGui, bg, countdownLabel = buildGui(winningTeam, stats, intermissionEndTime)
 		screenGui.Parent  = playerGui
 		screenGui.Enabled = true
 
 		showGui(bg)
 
-		-- Heartbeat-driven countdown
-		local remaining: number = Constants.INTERMISSION_TIME
-		local connection: RBXScriptConnection
-		local lastTick: number = tick()
+		if currentCountdownConnection then
+			currentCountdownConnection:Disconnect()
+			currentCountdownConnection = nil
+		end
 
-		connection = RunService.Heartbeat:Connect(function()
-			local now     = tick()
-			local elapsed = now - lastTick
-			lastTick      = now
-			remaining     = remaining - elapsed
+		-- Server-time-driven countdown
+		currentCountdownConnection = RunService.Heartbeat:Connect(function()
+			local remaining = intermissionEndTime - Workspace:GetServerTimeNow()
 
 			if remaining <= 0 then
-				connection:Disconnect()
+				if currentCountdownConnection then
+					currentCountdownConnection:Disconnect()
+					currentCountdownConnection = nil
+				end
 				countdownLabel.Text = "0"
 				hideGui(screenGui, bg)
 			else

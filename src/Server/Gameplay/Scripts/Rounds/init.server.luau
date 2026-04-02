@@ -124,12 +124,25 @@ local function startRoundLoopAsync()
 			Players.CharacterAutoLoads = true
 			spawnCharacters()
 
-			-- Countdown timer
+			-- Countdown timer uses server time so the HUD stays aligned.
+			local roundEndTime = Workspace:GetServerTimeNow() + timer
+			Workspace:SetAttribute(Constants.TIMER_ATTRIBUTE, timer)
+
 			while timer > 0 and not roundFinished do
-				timer -= 1
-				Workspace:SetAttribute(Constants.TIMER_ATTRIBUTE, timer)
-				task.wait(1)
+				local remaining = math.max(0, math.ceil(roundEndTime - Workspace:GetServerTimeNow()))
+				if remaining ~= timer then
+					timer = remaining
+					Workspace:SetAttribute(Constants.TIMER_ATTRIBUTE, timer)
+				end
+
+				if timer <= 0 then
+					break
+				end
+
+				task.wait(0.1)
 			end
+
+			Workspace:SetAttribute(Constants.TIMER_ATTRIBUTE, 0)
 
 			-- End the mode
 			mode.stop()
@@ -155,7 +168,8 @@ local function startRoundLoopAsync()
 			-- Collect stats and signal the COMBAT REPORT intermission screen
 			local stats = Scoring.getPlayerStats()
 			warn("[Rounds] Firing IntermissionStart — winningTeam:", winningTeam.Name, "| stats count:", #stats)
-			intermissionStartRemote:FireAllClients(winningTeam, stats)
+			local intermissionEndTime = Workspace:GetServerTimeNow() + Constants.INTERMISSION_TIME
+			intermissionStartRemote:FireAllClients(winningTeam, stats, intermissionEndTime)
 
 			-- Wait for intermission
 			task.wait(Constants.INTERMISSION_TIME)

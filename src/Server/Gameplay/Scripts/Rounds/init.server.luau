@@ -28,7 +28,14 @@ local function onCharacterAdded(player: Player): ()
 end
 
 local function onPlayerAdded(player: Player): ()
+	-- Assign team immediately so TeamCollisionFiltering sees it on CharacterAdded
+	local team = TeamAssigner.assignTeam(player)
+	if team == "" then
+		warn("[Rounds] TeamAssigner returned empty team for", player.Name)
+	end
+
 	player.CharacterAdded:Connect(function()
+		-- Re-assign on each respawn to maintain balanced teams
 		onCharacterAdded(player)
 	end)
 end
@@ -40,48 +47,56 @@ Players.PlayerAdded:Connect(onPlayerAdded)
 
 local function startRoundLoopAsync()
 	while true do
-		-- Reset scores
-		Scoring.resetScores()
+		local ok, err = xpcall(function()
+			-- Reset scores
+			Scoring.resetScores()
 
-		-- Pick mode
-		local mode = MODES[random:NextInteger(1, #MODES)]
-		local timer = mode.timer
+			-- Pick mode
+			local mode = MODES[random:NextInteger(1, #MODES)]
+			local timer = mode.timer
 
-		-- Start the mode, passing in a callback to be called if it finishes early
-		local roundFinished = false
-		mode.start(function()
-			roundFinished = true
+			-- Start the mode, passing in a callback to be called if it finishes early
+			local roundFinished = false
+			mode.start(function()
+				roundFinished = true
+			end)
+
+			-- Spawn characters
+			Players.CharacterAutoLoads = true
+			spawnCharacters()
+
+			-- Countdown timer
+			while timer > 0 and not roundFinished do
+				timer -= 1
+				Workspace:SetAttribute(Constants.TIMER_ATTRIBUTE, timer)
+				task.wait(1)
+			end
+
+			-- End the mode
+			mode.stop()
+
+			-- Display winning team
+			local teams = Teams:GetTeams()
+			table.sort(teams, function(teamA: Team, teamB: Team)
+				return Scoring.getTeamScore(teamA) > Scoring.getTeamScore(teamB)
+			end)
+
+			local winningTeam = teams[1]
+			roundWinnerRemote:FireAllClients(winningTeam)
+
+			-- Disable spawning
+			Players.CharacterAutoLoads = false
+			despawnCharacters()
+
+			-- Wait for intermission
+			task.wait(Constants.INTERMISSION_TIME)
+		end, function(e)
+			return e .. "\n" .. debug.traceback()
 		end)
-
-		-- Spawn characters
-		Players.CharacterAutoLoads = true
-		spawnCharacters()
-
-		-- Countdown timer
-		while timer > 0 and not roundFinished do
-			timer -= 1
-			Workspace:SetAttribute(Constants.TIMER_ATTRIBUTE, timer)
-			task.wait(1)
+		if not ok then
+			warn("[Rounds] Round iteration error — restarting in 5s:", err)
+			task.wait(5)
 		end
-
-		-- End the mode
-		mode.stop()
-
-		-- Display winning team
-		local teams = Teams:GetTeams()
-		table.sort(teams, function(teamA: Team, teamB: Team)
-			return Scoring.getTeamScore(teamA) > Scoring.getTeamScore(teamB)
-		end)
-
-		local winningTeam = teams[1]
-		roundWinnerRemote:FireAllClients(winningTeam)
-
-		-- Disable spawning
-		Players.CharacterAutoLoads = false
-		despawnCharacters()
-
-		-- Wait for intermission
-		task.wait(Constants.INTERMISSION_TIME)
 	end
 end
 

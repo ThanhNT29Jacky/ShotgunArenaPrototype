@@ -321,30 +321,46 @@ intermissionStartRemote.OnClientEvent:Connect(function(
 	winningTeam: Team,
 	stats: { { name: string, teamName: string, teamColor: Color3, kills: number } }
 )
-	-- Build fresh GUI each round
-	local screenGui, bg, countdownLabel = buildGui(winningTeam, stats)
-	screenGui.Parent  = playerGui
-	screenGui.Enabled = true
-
-	showGui(bg)
-
-	-- Heartbeat-driven countdown
-	local remaining: number = Constants.INTERMISSION_TIME
-	local connection: RBXScriptConnection
-	local lastTick: number = tick()
-
-	connection = RunService.Heartbeat:Connect(function()
-		local now     = tick()
-		local elapsed = now - lastTick
-		lastTick      = now
-		remaining     = remaining - elapsed
-
-		if remaining <= 0 then
-			connection:Disconnect()
-			countdownLabel.Text = "0"
-			hideGui(screenGui, bg)
-		else
-			countdownLabel.Text = tostring(math.ceil(remaining))
+	local ok, err = pcall(function()
+		-- Input validation
+		if not winningTeam then
+			warn("[IntermissionGui] winningTeam is nil — skipping GUI")
+			return
 		end
+		if type(stats) ~= "table" then
+			warn("[IntermissionGui] stats is not a table (got", type(stats), ") — using empty table")
+			stats = {}
+		end
+		warn("[IntermissionGui] Building GUI — winner:", winningTeam.Name, "| stats:", #stats)
+
+		-- Build fresh GUI each round
+		local screenGui, bg, countdownLabel = buildGui(winningTeam, stats)
+		screenGui.Parent  = playerGui
+		screenGui.Enabled = true
+
+		showGui(bg)
+
+		-- Heartbeat-driven countdown
+		local remaining: number = Constants.INTERMISSION_TIME
+		local connection: RBXScriptConnection
+		local lastTick: number = tick()
+
+		connection = RunService.Heartbeat:Connect(function()
+			local now     = tick()
+			local elapsed = now - lastTick
+			lastTick      = now
+			remaining     = remaining - elapsed
+
+			if remaining <= 0 then
+				connection:Disconnect()
+				countdownLabel.Text = "0"
+				hideGui(screenGui, bg)
+			else
+				countdownLabel.Text = tostring(math.ceil(remaining))
+			end
+		end)
 	end)
+	if not ok then
+		warn("[IntermissionGui] ERROR in OnClientEvent:", err)
+	end
 end)

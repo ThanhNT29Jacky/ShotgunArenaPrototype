@@ -19,7 +19,7 @@ local MODES = {
 }
 
 local random = Random.new()
-local MIN_PLAYERS = 2
+local MIN_PLAYERS = 1
 
 -- Assign team each time a player's character loads so the balanced
 -- round-robin stays correct across respawns.
@@ -75,10 +75,13 @@ local function waitForPlayers(): ()
 
 	-- React immediately when players join or leave
 	table.insert(connections, Players.PlayerAdded:Connect(checkReady))
-	table.insert(connections, Players.PlayerRemoving:Connect(function()
-		-- Defer so the player is removed from the list before we count
-		task.defer(broadcastCount)
-	end))
+	table.insert(
+		connections,
+		Players.PlayerRemoving:Connect(function()
+			-- Defer so the player is removed from the list before we count
+			task.defer(broadcastCount)
+		end)
+	)
 
 	-- Poll as a safety net
 	while not ready do
@@ -138,6 +141,11 @@ local function startRoundLoopAsync()
 			end)
 
 			local winningTeam = teams[1]
+			if not winningTeam then
+				warn("[Rounds] No winning team found — Teams service returned empty. Skipping intermission.")
+				task.wait(Constants.INTERMISSION_TIME)
+				return
+			end
 			roundWinnerRemote:FireAllClients(winningTeam)
 
 			-- Disable spawning
@@ -146,6 +154,7 @@ local function startRoundLoopAsync()
 
 			-- Collect stats and signal the COMBAT REPORT intermission screen
 			local stats = Scoring.getPlayerStats()
+			warn("[Rounds] Firing IntermissionStart — winningTeam:", winningTeam.Name, "| stats count:", #stats)
 			intermissionStartRemote:FireAllClients(winningTeam, stats)
 
 			-- Wait for intermission

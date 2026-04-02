@@ -21,6 +21,7 @@ local function applyConfig(player: Player, gunName: string)
 
 	local tool = (player.Backpack and player.Backpack:FindFirstChild("Blaster"))
 		or (player.Character and player.Character:FindFirstChild("Blaster"))
+	if tool and not tool:IsA("Tool") then tool = nil end
 
 	if not tool then return end
 
@@ -47,18 +48,27 @@ local function onSelectGun(player: Player, gunName: unknown)
 	end
 
 	-- Rate limiting: enforce 100ms minimum between gun selections per player
-	if lastSelectTime[player] and tick() - lastSelectTime[player] < 0.1 then
+	if lastSelectTime[player] and os.clock() - lastSelectTime[player] < 0.1 then
 		warn("[GunSelector] Selection throttled for", player.Name)
 		return
 	end
-	lastSelectTime[player] = tick()
+	lastSelectTime[player] = os.clock()
 
 	selectedGuns[player.UserId] = gunName
 	applyConfig(player, gunName)
 end
 
 local function onCharacterAdded(player: Player)
-	task.wait() -- let Backpack populate
+	local backpack = player:WaitForChild("Backpack", 5)
+	if not backpack then
+		warn("[GunSelector] Backpack not found for", player.Name)
+		return
+	end
+	local blasterTool = backpack:WaitForChild("Blaster", 5)
+	if not blasterTool then
+		warn("[GunSelector] Blaster tool not found in Backpack for", player.Name)
+		return
+	end
 	local saved = selectedGuns[player.UserId]
 	-- Apply the saved gun config, or default to Pistol on first spawn
 	applyConfig(player, saved or "Pistol")

@@ -9,6 +9,11 @@ local function validateNumber(number: number): boolean
 		return false
 	end
 
+	-- Make sure the number is not ±Infinity
+	if number == math.huge or number == -math.huge then
+		return false
+	end
+
 	return true
 end
 

@@ -1,9 +1,9 @@
 --!nocheck
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local drawRayResults = require(script.Parent.Parent.Utility.drawRayResults)
-local castRays = require(script.Parent.Parent.Utility.castRays)
-local playRandomSoundFromSource = require(script.Parent.Parent.Utility.playRandomSoundFromSource)
+local drawRayResults = require(ReplicatedStorage.Blaster.Utility.drawRayResults)
+local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
+local playRandomSoundFromSource = require(ReplicatedStorage.Blaster.Utility.playRandomSoundFromSource)
 
 local remotes = ReplicatedStorage.Blaster.Remotes
 local replicateShotRemote = remotes.ReplicateShot

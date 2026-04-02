@@ -56,7 +56,6 @@ function CharacterAnimationController:enable()
 	if self.enabled then
 		return
 	end
-	self.enabled = true
 
 	-- Load animations if they haven't been loaded already
 	if not self.loadedAnimations then
@@ -65,8 +64,9 @@ function CharacterAnimationController:enable()
 
 	if not self.animationTracks or not self.animationTracks.Idle then
 		warn("[CharacterAnimationController] Animation tracks not loaded, skipping enable")
-		return
+		return  -- self.enabled stays false; future enable() calls can retry
 	end
+	self.enabled = true
 	self.animationTracks.Idle:Play()
 end
 

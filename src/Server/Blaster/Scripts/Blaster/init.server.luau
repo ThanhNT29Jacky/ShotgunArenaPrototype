@@ -11,6 +11,10 @@ local validateReload = require(script.validateReload)
 local getRayDirections = require(ReplicatedStorage.Blaster.Utility.getRayDirections)
 local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 
+-- Per-player last-shot timestamp table for server-side fire-rate limiting.
+-- Keyed by Player instance; value is os.clock() at the moment the shot was accepted.
+local lastShotTime: { [Player]: number } = {}
+
 local remotes = ReplicatedStorage.Blaster.Remotes
 local shootRemote = remotes.Shoot
 local reloadRemote = remotes.Reload
@@ -38,6 +42,22 @@ local function onShootEvent(
 	origin: CFrame,
 	tagged: { [string]: Humanoid }
 )
+	-- Server-side fire rate gate (first line of defence — reduces load from spamming clients)
+	-- validateShot remains the authoritative anti-cheat; this gate is complementary.
+	local now = os.clock()
+	local blasterTool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+	if blasterTool then
+		local rateOfFire = blasterTool:GetAttribute("rateOfFire")
+		if rateOfFire and rateOfFire > 0 then
+			local minInterval = 60 / rateOfFire -- seconds per shot
+			local last = lastShotTime[player] or 0
+			if now - last < minInterval * 0.5 then -- 50 % tolerance for network jitter
+				return
+			end
+		end
+	end
+	lastShotTime[player] = now
+
 	-- Validate the received arguments
 	if not validateShootArguments(timestamp, blaster, origin, tagged) then
 		return
@@ -53,6 +73,14 @@ local function onShootEvent(
 	local range = blaster:GetAttribute(Constants.RANGE_ATTRIBUTE)
 	local rayRadius = blaster:GetAttribute(Constants.RAY_RADIUS_ATTRIBUTE)
 	local damage = blaster:GetAttribute(Constants.DAMAGE_ATTRIBUTE)
+	local force = blaster:GetAttribute(Constants.UNANCHORED_IMPULSE_FORCE_ATTRIBUTE)
+
+	for _, attrValue in { spread, raysPerShot, range, rayRadius, damage, force } do
+		if typeof(attrValue) ~= "number" then
+			warn("[Blaster] Missing or invalid blaster attribute for", player.Name)
+			return
+		end
+	end
 
 	-- Subtract ammo
 	local ammo = blaster:GetAttribute(Constants.AMMO_ATTRIBUTE)
@@ -69,6 +97,15 @@ local function onShootEvent(
 	-- Raycast against static geometry only
 	local rayResults = castRays(player, origin.Position, rayDirections, rayRadius, true)
 
+	-- Cap tagged table to raysPerShot to prevent DoS
+	local taggedCount = 0
+	for _ in tagged do
+		taggedCount += 1
+		if taggedCount > raysPerShot then
+			return  -- Client claiming more hits than rays fired — reject
+		end
+	end
+
 	-- Validate hits
 	for indexString, taggedHumanoid in tagged do
 		-- The tagged table contains a client-reported list of the humanoids hit by each of the rays that was fired.
@@ -80,7 +117,7 @@ local function onShootEvent(
 			continue
 		end
 		local rayResult = rayResults[index]
-		if not rayResults[index] then
+		if not rayResult then
 			continue
 		end
 		local rayDirection = rayDirections[index]
@@ -119,7 +156,6 @@ local function onShootEvent(
 
 	-- Apply physics impulse
 	-- This is the most straightforward way to do this, although there will be some latency since the impulse is being applied on the server
-	local force = blaster:GetAttribute(Constants.UNANCHORED_IMPULSE_FORCE_ATTRIBUTE)
 	if force ~= 0 then
 		for index, rayResult in rayResults do
 			-- We don't want to apply impulses to characters, so we'll skip if we tagged a humanoid
@@ -193,6 +229,11 @@ local function onReloadInvoke(player: Player, blaster: Tool): boolean
 end
 
 local function initialize()
+	-- Clean up per-player tracking when they leave to prevent memory leaks
+	Players.PlayerRemoving:Connect(function(player: Player)
+		lastShotTime[player] = nil
+	end)
+
 	shootRemote.OnServerEvent:Connect(function(player: Player, ...)
 		local ok, err = xpcall(onShootEvent, function(e: string): string
 			warn("[Blaster] onShootEvent error for", player.Name, ":", e, debug.traceback())

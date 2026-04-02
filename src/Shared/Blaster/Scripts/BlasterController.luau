@@ -285,7 +285,7 @@ function BlasterController:equip()
 	self.fov = self.blaster:GetAttribute(Constants.AIM_ASSIST_FOV_ATTRIBUTE)
 	self.friction = self.blaster:GetAttribute(Constants.AIM_ASSIST_FRICTION_STRENGTH_ATTRIBUTE)
 	self.tracking = self.blaster:GetAttribute(Constants.AIM_ASSIST_TRACKING_STRENGTH_ATTRIBUTE)
-	self.centering = self.blaster:GetAttribute(Constants.AIM_ASSIST_TRACKING_STRENGTH_ATTRIBUTE)
+	self.centering = self.blaster:GetAttribute(Constants.AIM_ASSIST_CENTERING_STRENGTH_ATTRIBUTE)
 
 	-- Set up the Aim Assist Controller
 	self.aimAssistController:setSubject(Workspace.CurrentCamera)

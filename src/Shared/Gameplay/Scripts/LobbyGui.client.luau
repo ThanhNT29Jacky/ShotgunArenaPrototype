@@ -89,15 +89,8 @@ dotLabel.Parent = container
 
 local dotFrames = { ".", "..", "..." }
 local dotIndex = 1
-local dotConnection: RBXScriptConnection? = nil
 
 local function startDotAnimation(): ()
-	dotConnection = game:GetService("RunService").Heartbeat:Connect(function()
-		-- No-op: we use task.spawn loop instead
-	end)
-	dotConnection:Disconnect()
-	dotConnection = nil
-
 	task.spawn(function()
 		while screenGui.Enabled do
 			dotLabel.Text = dotFrames[dotIndex]

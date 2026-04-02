@@ -7,6 +7,7 @@ local Teams = game:GetService("Teams")
 local disconnectAndClear = require(ReplicatedStorage.Utility.disconnectAndClear)
 
 local connections: { [string]: { RBXScriptConnection } } = {}
+local characterConnections: { [Player]: RBXScriptConnection } = {}
 
 -- When a new team is added, we'll register a new collision group for that team that doesn't collide with itself.
 -- This allows players on the same team to walk and shoot through each other, as well as block other teams from
@@ -68,12 +69,17 @@ local function onCharacterAdded(character: Model)
 
 	local collisionGroup = player.Team.Name
 
-	character.DescendantAdded:Connect(function(instance: Instance)
+	-- Disconnect any stale connection from a previous spawn before storing the new one
+	local prevConn = characterConnections[player]
+	if prevConn then
+		prevConn:Disconnect()
+	end
+
+	characterConnections[player] = character.DescendantAdded:Connect(function(instance: Instance)
 		if instance:IsA("BasePart") then
 			instance.CollisionGroup = collisionGroup
 		end
 	end)
-
 	for _, instance in character:GetDescendants() do
 		if instance:IsA("BasePart") then
 			instance.CollisionGroup = collisionGroup
@@ -93,6 +99,14 @@ local function initialize()
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Teams.ChildAdded:Connect(onTeamAdded)
 	Teams.ChildRemoved:Connect(onTeamRemoved)
+
+	Players.PlayerRemoving:Connect(function(player: Player)
+		local conn = characterConnections[player]
+		if conn then
+			conn:Disconnect()
+			characterConnections[player] = nil
+		end
+	end)
 
 	for _, team in Teams:GetChildren() do
 		onTeamAdded(team)

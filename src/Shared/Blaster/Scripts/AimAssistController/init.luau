@@ -61,7 +61,7 @@ function AimAssist:getTouchEligibility(): boolean
 		return false
 	end
 
-	return self.lastActiveTouch :: number - os.clock() < Constants.AIM_ASSIST_INACTIVITY
+	return os.clock() - (self.lastActiveTouch :: number) < Constants.AIM_ASSIST_INACTIVITY
 end
 
 function AimAssist:updateTouchEligibility()
@@ -210,6 +210,7 @@ function AimAssist.new()
 end
 
 function AimAssist:destroy()
+	self:disable()  -- ensures UnbindFromRenderStep is always called
 	if self.debugVisualizer then
 		self.debugVisualizer:destroy()
 	end

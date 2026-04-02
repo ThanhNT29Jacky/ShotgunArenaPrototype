@@ -6,6 +6,7 @@ local Constants = require(ReplicatedStorage.Blaster.Constants)
 local TIMESTAMP_BUFFER_CONSTANT = 1
 local POSITION_BUFFER_CONSTANT = 5
 local POSITION_BUFFER_FACTOR = 0.4
+local MAX_ORIGIN_DISTANCE = 50  -- studs; generous cap for any arena size
 
 local function validateShot(player: Player, timestamp: number, blaster: Tool, origin: CFrame): boolean
 	-- Validate timestamp
@@ -47,13 +48,14 @@ local function validateShot(player: Player, timestamp: number, blaster: Tool, or
 
 	-- Make sure the blaster has enough ammo
 	local ammo = blaster:GetAttribute(Constants.AMMO_ATTRIBUTE)
-	if ammo <= 0 then
+	if typeof(ammo) ~= "number" or ammo <= 0 then
 		return false
 	end
 
 	-- Make sure the origin position is within a reasonable distance from the character
 	local distance = (primaryPart.Position - origin.Position).Magnitude
-	local maxDistance = POSITION_BUFFER_CONSTANT + primaryPart.AssemblyLinearVelocity.Magnitude * POSITION_BUFFER_FACTOR
+	local velocityAllowance = primaryPart.AssemblyLinearVelocity.Magnitude * POSITION_BUFFER_FACTOR
+	local maxDistance = math.min(POSITION_BUFFER_CONSTANT + velocityAllowance, MAX_ORIGIN_DISTANCE)
 	if distance > maxDistance then
 		return false
 	end

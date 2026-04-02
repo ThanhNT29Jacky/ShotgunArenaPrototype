@@ -11,6 +11,9 @@ local eliminatedRemote = remotes.Eliminated
 local function onEliminated(player: Player, eliminatedHumanoid: Humanoid)
 	-- When a player gets an elimination, fire a remote to tell them to display an elimination UI
 	local eliminatedCharacter = eliminatedHumanoid.Parent
+	if not eliminatedCharacter then
+		return
+	end
 	local eliminatedPlayer = Players:GetPlayerFromCharacter(eliminatedCharacter)
 	local name = if eliminatedPlayer then eliminatedPlayer.DisplayName else eliminatedCharacter.Name
 

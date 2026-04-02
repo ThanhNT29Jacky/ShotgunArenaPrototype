@@ -46,6 +46,7 @@ function ViewModelController.new(blaster: Tool)
 	local animations = {}
 	for _, animation in animationsFolder:GetChildren() do
 		local animationTrack = animator:LoadAnimation(animation)
+		animationTrack.Looped = false
 		animations[animation.Name] = animationTrack
 
 		-- Sounds will all be driven by animation events

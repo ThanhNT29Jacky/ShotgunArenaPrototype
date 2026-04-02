@@ -68,12 +68,19 @@ function Scoring.resetScores()
 end
 
 function Scoring.incrementScore(player: Player, amount: number)
-	local score = player.leaderstats.Score
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then return end
+	local score = leaderstats:FindFirstChild("Score")
+	if not score then return end
 	score.Value += amount
 end
 
 function Scoring.getPlayerScore(player: Player): number
-	return player.leaderstats.Score.Value
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then return 0 end
+	local score = leaderstats:FindFirstChild("Score")
+	if not score then return 0 end
+	return score.Value
 end
 
 function Scoring.getTeamScore(team: Team): number

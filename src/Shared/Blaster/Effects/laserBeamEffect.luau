@@ -7,7 +7,9 @@ local Constants = require(ReplicatedStorage.Blaster.Constants)
 local laserBeamTemplate = ReplicatedStorage.Blaster.Objects.LaserBeam
 
 local function laserBeamEffect(startPosition: Vector3, endPosition: Vector3)
-	local distance = (startPosition - endPosition).Magnitude
+	local offset = endPosition - startPosition
+	local distance = offset.Magnitude
+	if distance < 0.001 then return end
 	local tweenTime = distance / Constants.LASER_BEAM_VISUAL_SPEED
 	local tweenInfo = TweenInfo.new(tweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
 

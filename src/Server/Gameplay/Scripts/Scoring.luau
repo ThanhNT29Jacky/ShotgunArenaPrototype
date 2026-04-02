@@ -80,6 +80,21 @@ function Scoring.getTeamScore(team: Team): number
 	return team:GetAttribute(Constants.TEAM_SCORE_ATTRIBUTE) or 0
 end
 
+-- Returns a snapshot of every player's stats for the COMBAT REPORT intermission screen.
+-- Payload: array of {name, teamName, teamColor, kills}
+function Scoring.getPlayerStats(): { { name: string, teamName: string, teamColor: Color3, kills: number } }
+	local stats: { { name: string, teamName: string, teamColor: Color3, kills: number } } = {}
+	for _, player in Players:GetPlayers() do
+		table.insert(stats, {
+			name = player.Name,
+			teamName = if player.Team then player.Team.Name else "",
+			teamColor = if player.Team then player.Team.TeamColor.Color else Color3.new(1, 1, 1),
+			kills = Scoring.getPlayerScore(player),
+		})
+	end
+	return stats
+end
+
 safePlayerAdded(onPlayerAdded)
 Players.PlayerRemoving:Connect(onPlayerRemoving)
 

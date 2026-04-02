@@ -12,6 +12,7 @@ local TeamAssigner = require(script.TeamAssigner)
 local remotes = ReplicatedStorage.Gameplay.Remotes
 local roundWinnerRemote = remotes.RoundWinner
 local lobbyStatusRemote = remotes.LobbyStatus
+local intermissionStartRemote = remotes.IntermissionStart
 
 local MODES = {
 	require(script.Parent.Modes.TDM),
@@ -142,6 +143,10 @@ local function startRoundLoopAsync()
 			-- Disable spawning
 			Players.CharacterAutoLoads = false
 			despawnCharacters()
+
+			-- Collect stats and signal the COMBAT REPORT intermission screen
+			local stats = Scoring.getPlayerStats()
+			intermissionStartRemote:FireAllClients(winningTeam, stats)
 
 			-- Wait for intermission
 			task.wait(Constants.INTERMISSION_TIME)

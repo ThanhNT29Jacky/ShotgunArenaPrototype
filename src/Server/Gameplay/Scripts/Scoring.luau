@@ -7,6 +7,7 @@
 --]]
 
 local Players = game:GetService("Players")
+local Teams = game:GetService("Teams")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage.Gameplay.Constants)
@@ -51,8 +52,18 @@ local function onPlayerRemoving(player: Player)
 end
 
 function Scoring.resetScores()
+	-- Reset individual player scores
 	for _, player in Players:GetPlayers() do
-		player.leaderstats.Score.Value = 0
+		local leaderstats = player:FindFirstChild("leaderstats")
+		if not leaderstats then continue end
+		local score = leaderstats:FindFirstChild("Score")
+		if not score then continue end
+		score.Value = 0
+	end
+
+	-- Also zero out the team score attributes so the scoreboard resets visually
+	for _, team in Teams:GetTeams() do
+		team:SetAttribute(Constants.TEAM_SCORE_ATTRIBUTE, 0)
 	end
 end
 

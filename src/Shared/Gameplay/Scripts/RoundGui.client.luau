@@ -7,7 +7,11 @@ local Constants = require(ReplicatedStorage.Gameplay.Constants)
 
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
-local gui = playerGui:WaitForChild("GameplayGui")
+local gui = playerGui:WaitForChild("GameplayGui", 10)
+if not gui then
+	warn("[RoundGui] GameplayGui not found within 10s — aborting")
+	return
+end
 local teamScoreLabelTemplate = script.TeamScoreLabel
 
 local teamScoreLabels = {}

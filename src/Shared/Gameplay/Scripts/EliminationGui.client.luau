@@ -5,7 +5,11 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
-local gui = playerGui:WaitForChild("GameplayGui")
+local gui = playerGui:WaitForChild("GameplayGui", 10)
+if not gui then
+	warn("[EliminationGui] GameplayGui not found within 10s — aborting")
+	return
+end
 local eliminationLabelTemplate = script.EliminationLabel
 local eliminatedPlayer = SoundService.Audio.Players.UI.EliminatedPlayer
 

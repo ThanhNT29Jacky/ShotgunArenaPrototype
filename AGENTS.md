@@ -107,14 +107,6 @@ git add src/
 git commit -m "add <feature>"
 git push
 
-# Beads issue tracking
-bd ready              # find available work
-bd show <id>          # view issue details
-bd update <id> --claim  # claim work
-bd close <id>         # complete work
-bd prime              # full workflow context
-```
-
 Testing happens **inside Studio** — no CLI test runner exists for Roblox.
 See §6 for the TestService pattern.
 
@@ -570,32 +562,11 @@ Work is **not complete** until `git push` succeeds.
 
 ```bash
 git pull --rebase
-bd dolt push        # sync Beads issue db
 git push
 git status          # MUST show "up to date with origin"
 ```
 
 ---
-
-## 10. Beads Issue Tracker
-
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
 ## Session Completion
 
@@ -609,7 +580,6 @@ bd close <id>         # Complete work
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```

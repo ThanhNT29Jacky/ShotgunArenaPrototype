@@ -5,7 +5,11 @@ local Constants = require(ReplicatedStorage.Gameplay.Constants)
 
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
-local gui = playerGui:WaitForChild("GameplayGui")
+local gui = playerGui:WaitForChild("GameplayGui", 10)
+if not gui then
+	warn("[GuiScale] GameplayGui not found within 10s — aborting")
+	return
+end
 
 function updateScale()
 	-- Update UI size. This is the same logic used by the default touch controls

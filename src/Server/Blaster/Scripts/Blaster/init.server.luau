@@ -11,6 +11,10 @@ local validateReload = require(script.validateReload)
 local getRayDirections = require(ReplicatedStorage.Blaster.Utility.getRayDirections)
 local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 
+-- Per-player last-shot timestamp table for server-side fire-rate limiting.
+-- Keyed by Player instance; value is os.clock() at the moment the shot was accepted.
+local lastShotTime: { [Player]: number } = {}
+
 local remotes = ReplicatedStorage.Blaster.Remotes
 local shootRemote = remotes.Shoot
 local reloadRemote = remotes.Reload
@@ -20,6 +24,17 @@ local events = ServerScriptService.Blaster.Events
 local taggedEvent = events.Tagged
 local eliminatedEvent = events.Eliminated
 
+-- OnServerEvent contract:
+--   player:    Player               — automatically injected by Roblox; never trust client-supplied identity
+--   timestamp: number               — Workspace:GetServerTimeNow() from client; validated against last-shot time (anti-spam);
+--                                     also used as the random seed to reproduce the same spread on the server
+--   blaster:   Tool                 — client's equipped weapon; validated via validateShootArguments to be the player's
+--                                     active tool; attributes (spread, range, damage, etc.) read server-side only
+--   origin:    CFrame               — client camera CFrame at fire time; server recasts all rays from this origin
+--                                     using the same seed so no client-supplied directions are trusted
+--   tagged:    {[string]: Humanoid} — client-reported hits (string keys – non-contiguous arrays don't replicate reliably);
+--                                     each entry is re-validated against server raycasts before any damage is applied
+-- Post-conditions: only server-confirmed hits receive damage; taggedEvent and eliminatedEvent fire with authoritative results
 local function onShootEvent(
 	player: Player,
 	timestamp: number,
@@ -27,6 +42,22 @@ local function onShootEvent(
 	origin: CFrame,
 	tagged: { [string]: Humanoid }
 )
+	-- Server-side fire rate gate (first line of defence — reduces load from spamming clients)
+	-- validateShot remains the authoritative anti-cheat; this gate is complementary.
+	local now = os.clock()
+	local blasterTool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+	if blasterTool then
+		local rateOfFire = blasterTool:GetAttribute("rateOfFire")
+		if rateOfFire and rateOfFire > 0 then
+			local minInterval = 60 / rateOfFire -- seconds per shot
+			local last = lastShotTime[player] or 0
+			if now - last < minInterval * 0.5 then -- 50 % tolerance for network jitter
+				return
+			end
+		end
+	end
+	lastShotTime[player] = now
+
 	-- Validate the received arguments
 	if not validateShootArguments(timestamp, blaster, origin, tagged) then
 		return
@@ -42,6 +73,14 @@ local function onShootEvent(
 	local range = blaster:GetAttribute(Constants.RANGE_ATTRIBUTE)
 	local rayRadius = blaster:GetAttribute(Constants.RAY_RADIUS_ATTRIBUTE)
 	local damage = blaster:GetAttribute(Constants.DAMAGE_ATTRIBUTE)
+	local force = blaster:GetAttribute(Constants.UNANCHORED_IMPULSE_FORCE_ATTRIBUTE)
+
+	for _, attrValue in { spread, raysPerShot, range, rayRadius, damage, force } do
+		if typeof(attrValue) ~= "number" then
+			warn("[Blaster] Missing or invalid blaster attribute for", player.Name)
+			return
+		end
+	end
 
 	-- Subtract ammo
 	local ammo = blaster:GetAttribute(Constants.AMMO_ATTRIBUTE)
@@ -58,6 +97,15 @@ local function onShootEvent(
 	-- Raycast against static geometry only
 	local rayResults = castRays(player, origin.Position, rayDirections, rayRadius, true)
 
+	-- Cap tagged table to raysPerShot to prevent DoS
+	local taggedCount = 0
+	for _ in tagged do
+		taggedCount += 1
+		if taggedCount > raysPerShot then
+			return  -- Client claiming more hits than rays fired — reject
+		end
+	end
+
 	-- Validate hits
 	for indexString, taggedHumanoid in tagged do
 		-- The tagged table contains a client-reported list of the humanoids hit by each of the rays that was fired.
@@ -69,7 +117,7 @@ local function onShootEvent(
 			continue
 		end
 		local rayResult = rayResults[index]
-		if not rayResults[index] then
+		if not rayResult then
 			continue
 		end
 		local rayDirection = rayDirections[index]
@@ -108,7 +156,6 @@ local function onShootEvent(
 
 	-- Apply physics impulse
 	-- This is the most straightforward way to do this, although there will be some latency since the impulse is being applied on the server
-	local force = blaster:GetAttribute(Constants.UNANCHORED_IMPULSE_FORCE_ATTRIBUTE)
 	if force ~= 0 then
 		for index, rayResult in rayResults do
 			-- We don't want to apply impulses to characters, so we'll skip if we tagged a humanoid
@@ -182,8 +229,24 @@ local function onReloadInvoke(player: Player, blaster: Tool): boolean
 end
 
 local function initialize()
-	shootRemote.OnServerEvent:Connect(onShootEvent)
-	reloadRemote.OnServerInvoke = onReloadInvoke
+	-- Clean up per-player tracking when they leave to prevent memory leaks
+	Players.PlayerRemoving:Connect(function(player: Player)
+		lastShotTime[player] = nil
+	end)
+
+	shootRemote.OnServerEvent:Connect(function(player: Player, ...)
+		local ok, err = xpcall(onShootEvent, function(e: string): string
+			warn("[Blaster] onShootEvent error for", player.Name, ":", e, debug.traceback())
+			return e
+		end, player, ...)
+	end)
+	reloadRemote.OnServerInvoke = function(player: Player, ...)
+		local ok, result = xpcall(onReloadInvoke, function(e: string): string
+			warn("[Blaster] onReloadInvoke error for", player.Name, ":", e, debug.traceback())
+			return e
+		end, player, ...)
+		return ok and result or false
+	end
 end
 
 initialize()

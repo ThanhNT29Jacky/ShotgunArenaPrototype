@@ -77,8 +77,8 @@ function BlasterController:canReload(): boolean
 end
 
 function BlasterController:recoil()
-	local recoilMax      = self.blaster:GetAttribute(Constants.RECOIL_MAX_ATTRIBUTE)
-	local accelerateTime = self.blaster:GetAttribute(Constants.RECOIL_ACCELERATE_ATTRIBUTE)
+	local recoilMax: Vector2      = self.blaster:GetAttribute(Constants.RECOIL_MAX_ATTRIBUTE) or Vector2.new(5, 4)
+	local accelerateTime: number = self.blaster:GetAttribute(Constants.RECOIL_ACCELERATE_ATTRIBUTE) or 0.4
 
 	local maxXRad = math.rad(recoilMax.X)
 	local maxYRad = math.rad(recoilMax.Y)
@@ -142,6 +142,11 @@ function BlasterController:shoot()
 		self.guiController:showHitmarker()
 	end
 
+	-- FireServer args:
+	--   timestamp: number              — Workspace:GetServerTimeNow(); also seeds server-side ray spread recalculation
+	--   blaster:   Tool               — equipped weapon; server reads gun attributes (spread, range, damage, etc.)
+	--   origin:    CFrame             — camera CFrame at fire time; server recasts rays from this origin
+	--   tagged:    {[string]: Humanoid} — string-keyed hit map (non-contiguous arrays don't replicate reliably)
 	shootRemote:FireServer(now, self.blaster, origin, tagged)
 
 	local muzzlePosition = self.viewModelController:getMuzzlePosition()
@@ -280,7 +285,7 @@ function BlasterController:equip()
 	self.fov = self.blaster:GetAttribute(Constants.AIM_ASSIST_FOV_ATTRIBUTE)
 	self.friction = self.blaster:GetAttribute(Constants.AIM_ASSIST_FRICTION_STRENGTH_ATTRIBUTE)
 	self.tracking = self.blaster:GetAttribute(Constants.AIM_ASSIST_TRACKING_STRENGTH_ATTRIBUTE)
-	self.centering = self.blaster:GetAttribute(Constants.AIM_ASSIST_TRACKING_STRENGTH_ATTRIBUTE)
+	self.centering = self.blaster:GetAttribute(Constants.AIM_ASSIST_CENTERING_STRENGTH_ATTRIBUTE)
 
 	-- Set up the Aim Assist Controller
 	self.aimAssistController:setSubject(Workspace.CurrentCamera)

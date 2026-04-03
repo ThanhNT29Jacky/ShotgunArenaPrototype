@@ -5,8 +5,43 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
-local gui = playerGui:WaitForChild("GameplayGui")
-local eliminationLabelTemplate = script.EliminationLabel
+local gui = playerGui:WaitForChild("GameplayGui", 10)
+if not gui then
+	warn("[EliminationGui] GameplayGui not found within 10s — aborting")
+	return
+end
+
+local function getEliminationLabelTemplate(): TextLabel
+	local existingTemplate = script:FindFirstChild("EliminationLabel")
+	if existingTemplate and existingTemplate:IsA("TextLabel") then
+		return existingTemplate
+	end
+
+	local eliminationLabel = Instance.new("TextLabel")
+	eliminationLabel.Name = "EliminationLabel"
+	eliminationLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	eliminationLabel.BackgroundTransparency = 0.35
+	eliminationLabel.BorderSizePixel = 0
+	eliminationLabel.AutomaticSize = Enum.AutomaticSize.XY
+	eliminationLabel.Font = Enum.Font.GothamMedium
+	eliminationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	eliminationLabel.TextScaled = false
+	eliminationLabel.TextSize = 18
+	eliminationLabel.TextWrapped = false
+	eliminationLabel.Parent = script
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1
+	scale.Parent = eliminationLabel
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = eliminationLabel
+
+	return eliminationLabel
+end
+
+local eliminationLabelTemplate = getEliminationLabelTemplate()
 local eliminatedPlayer = SoundService.Audio.Players.UI.EliminatedPlayer
 
 local remotes = ReplicatedStorage.Gameplay.Remotes

@@ -16,10 +16,5 @@
 .beads
 .agents
 
-# Beads / Dolt files (added by bd init)
-.dolt/
-*.db
-.beads-credential-key
-
 # Git worktrees (isolated workspaces for feature branches)
 .worktrees/

@@ -6,6 +6,15 @@
 /*.rbxlx
 /*.rbxm
 /*.rbxmx
+/skills-lock.json
+.opencode
+.playwright-mcp
+.serena
+.worktrees
+.codemap
+.claude
+.beads
+.agents
 
 # Beads / Dolt files (added by bd init)
 .dolt/

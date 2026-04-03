@@ -1,7 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "server",
-  "dolt_database": "ShotgunArenaPrototype",
-  "project_id": "0f857544-4fc1-4ad7-a162-92ead1ab30dd"
-}

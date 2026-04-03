@@ -12,7 +12,36 @@ if not gui then
 	warn("[RoundGui] GameplayGui not found within 10s — aborting")
 	return
 end
-local teamScoreLabelTemplate = script.TeamScoreLabel
+
+local function getTeamScoreLabelTemplate(): TextLabel
+	local existingTemplate = script:FindFirstChild("TeamScoreLabel")
+	if existingTemplate and existingTemplate:IsA("TextLabel") then
+		return existingTemplate
+	end
+
+	local teamScoreLabel = Instance.new("TextLabel")
+	teamScoreLabel.Name = "TeamScoreLabel"
+	teamScoreLabel.BackgroundTransparency = 1
+	teamScoreLabel.BorderSizePixel = 0
+	teamScoreLabel.Size = UDim2.fromOffset(48, 28)
+	teamScoreLabel.Font = Enum.Font.GothamBold
+	teamScoreLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	teamScoreLabel.TextScaled = false
+	teamScoreLabel.TextSize = 18
+	teamScoreLabel.TextXAlignment = Enum.TextXAlignment.Center
+	teamScoreLabel.TextYAlignment = Enum.TextYAlignment.Center
+	teamScoreLabel.Parent = script
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Enabled = false
+	stroke.Thickness = 2
+	stroke.Color = Color3.fromRGB(0, 0, 0)
+	stroke.Parent = teamScoreLabel
+
+	return teamScoreLabel
+end
+
+local teamScoreLabelTemplate = getTeamScoreLabelTemplate()
 
 local teamScoreLabels = {}
 

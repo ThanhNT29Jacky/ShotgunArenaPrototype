@@ -42,6 +42,9 @@ local FADE_IN_INFO  = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirec
 local FADE_OUT_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local BLUR_IN_INFO  = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local BLUR_OUT_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local CARD_IN_INFO  = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local CARD_START_SCALE = 0.92
+local CARD_STAGGER_DELAY = 0.055
 
 -- ── Blur effect ──────────────────────────────────────────────────────────────
 local blur: BlurEffect = Instance.new("BlurEffect")
@@ -106,13 +109,19 @@ local function buildPlayerCard(
 ): Frame
 	local card = makeFrame(parent, UDim2.new(1, 0, 0, 44), UDim2.new(0, 0, 0, 0), CARD_BG, 0)
 	card.LayoutOrder = layoutOrder
+	card.BackgroundTransparency = 1
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = CARD_START_SCALE
+	scale.Parent = card
 
 	-- Left accent stripe
 	local stripe = makeFrame(card, UDim2.new(0, 3, 1, 0), UDim2.new(0, 0, 0, 0), teamColor, 0)
 	stripe.Name = "Stripe"
+	stripe.BackgroundTransparency = 1
 
 	-- Player name
-	makeLabel(
+	local nameLabel = makeLabel(
 		card,
 		name,
 		UDim2.new(0.7, -8, 1, 0),
@@ -121,9 +130,10 @@ local function buildPlayerCard(
 		WHITE,
 		Enum.Font.GothamMedium
 	)
+	nameLabel.TextTransparency = 1
 
 	-- Kill count with star
-	makeLabel(
+	local killsLabel = makeLabel(
 		card,
 		"☆ " .. tostring(kills),
 		UDim2.new(0.3, -8, 1, 0),
@@ -132,12 +142,45 @@ local function buildPlayerCard(
 		GOLD,
 		Enum.Font.GothamBold
 	)
+	killsLabel.TextTransparency = 1
 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 4)
 	corner.Parent = card
 
 	return card
+end
+
+local function animatePlayerCard(card: Frame, delaySeconds: number)
+	task.delay(delaySeconds, function()
+		if not card.Parent then
+			return
+		end
+
+		local tweens = {}
+
+		local scale = card:FindFirstChildOfClass("UIScale")
+		if scale then
+			table.insert(tweens, TweenService:Create(scale, CARD_IN_INFO, { Scale = 1 }))
+		end
+
+		table.insert(tweens, TweenService:Create(card, CARD_IN_INFO, { BackgroundTransparency = 0 }))
+
+		local stripe = card:FindFirstChild("Stripe")
+		if stripe and stripe:IsA("Frame") then
+			table.insert(tweens, TweenService:Create(stripe, CARD_IN_INFO, { BackgroundTransparency = 0 }))
+		end
+
+		for _, descendant in ipairs(card:GetDescendants()) do
+			if descendant:IsA("TextLabel") then
+				table.insert(tweens, TweenService:Create(descendant, CARD_IN_INFO, { TextTransparency = 0 }))
+			end
+		end
+
+		for _, tween in ipairs(tweens) do
+			tween:Play()
+		end
+	end)
 end
 
 -- ── Build the full GUI ────────────────────────────────────────────────────────
@@ -242,7 +285,7 @@ local function buildGui(
 	end
 
 	for i, entry in ipairs(teamAPlayers) do
-		buildPlayerCard(leftCol, i, entry.name, entry.kills, entry.teamColor)
+		animatePlayerCard(buildPlayerCard(leftCol, i, entry.name, entry.kills, entry.teamColor), (i - 1) * CARD_STAGGER_DELAY)
 	end
 
 	-- Right column — Team B
@@ -266,7 +309,7 @@ local function buildGui(
 	end
 
 	for i, entry in ipairs(teamBPlayers) do
-		buildPlayerCard(rightCol, i, entry.name, entry.kills, entry.teamColor)
+		animatePlayerCard(buildPlayerCard(rightCol, i, entry.name, entry.kills, entry.teamColor), (i - 1) * CARD_STAGGER_DELAY)
 	end
 
 	-- Centre column — circular countdown ring

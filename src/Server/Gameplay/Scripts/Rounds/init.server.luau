@@ -13,13 +13,15 @@ local remotes = ReplicatedStorage.Gameplay.Remotes
 local roundWinnerRemote = remotes.RoundWinner
 local lobbyStatusRemote = remotes.LobbyStatus
 local intermissionStartRemote = remotes.IntermissionStart
+local intermissionDataRemote = remotes.IntermissionData
 
 local MODES = {
 	require(script.Parent.Modes.TDM),
 }
 
 local random = Random.new()
-local MIN_PLAYERS = 1
+local MIN_PLAYERS = 2
+local LOBBY_START_GRACE = 3
 
 -- Assign team each time a player's character loads so the balanced
 -- round-robin stays correct across respawns.
@@ -49,56 +51,37 @@ end
 Players.PlayerAdded:Connect(onPlayerAdded)
 
 -- Wait until at least MIN_PLAYERS players are connected.
--- Fires LobbyStatus remote with (currentCount, required) for the lobby UI.
+-- Fires LobbyStatus remote with (status, currentCount, required) for the lobby UI.
 local function waitForPlayers(): ()
-	local function broadcastCount(): ()
-		lobbyStatusRemote:FireAllClients(#Players:GetPlayers(), MIN_PLAYERS)
+	local function broadcastStatus(status: string): ()
+		lobbyStatusRemote:FireAllClients(status, #Players:GetPlayers(), MIN_PLAYERS)
 	end
 
-	-- Already have enough players — broadcast once and return
-	if #Players:GetPlayers() >= MIN_PLAYERS then
-		broadcastCount()
-		return
-	end
+	while true do
+		while #Players:GetPlayers() < MIN_PLAYERS do
+			broadcastStatus("waiting")
+			task.wait(0.25)
+		end
 
-	warn("[Rounds] Waiting for players — need", MIN_PLAYERS, "have", #Players:GetPlayers())
+		broadcastStatus("starting")
+		local graceDeadline = Workspace:GetServerTimeNow() + LOBBY_START_GRACE
+		local aborted = false
 
-	local ready = false
-	local connections: { RBXScriptConnection } = {}
+		while Workspace:GetServerTimeNow() < graceDeadline do
+			if #Players:GetPlayers() < MIN_PLAYERS then
+				warn("[Rounds] Player count dropped below minimum during lobby grace period")
+				aborted = true
+				break
+			end
 
-	local function checkReady(): ()
-		broadcastCount()
-		if #Players:GetPlayers() >= MIN_PLAYERS then
-			ready = true
+			task.wait(0.25)
+		end
+
+		if not aborted and #Players:GetPlayers() >= MIN_PLAYERS then
+			warn("[Rounds] Minimum players reached — starting round")
+			return
 		end
 	end
-
-	-- React immediately when players join or leave
-	table.insert(connections, Players.PlayerAdded:Connect(checkReady))
-	table.insert(
-		connections,
-		Players.PlayerRemoving:Connect(function()
-			-- Defer so the player is removed from the list before we count
-			task.defer(broadcastCount)
-		end)
-	)
-
-	-- Poll as a safety net
-	while not ready do
-		task.wait(1)
-		if #Players:GetPlayers() >= MIN_PLAYERS then
-			ready = true
-		end
-		broadcastCount()
-	end
-
-	-- Disconnect event listeners
-	for _, conn in connections do
-		conn:Disconnect()
-	end
-
-	broadcastCount() -- final broadcast signals lobby is closing / round starting
-	warn("[Rounds] Minimum players reached — starting round")
 end
 
 local function startRoundLoopAsync()
@@ -169,6 +152,7 @@ local function startRoundLoopAsync()
 			local stats = Scoring.getPlayerStats()
 			warn("[Rounds] Firing IntermissionStart — winningTeam:", winningTeam.Name, "| stats count:", #stats)
 			local intermissionEndTime = Workspace:GetServerTimeNow() + Constants.INTERMISSION_TIME
+			intermissionDataRemote:FireAllClients(stats)
 			intermissionStartRemote:FireAllClients(winningTeam, stats, intermissionEndTime)
 
 			-- Wait for intermission
